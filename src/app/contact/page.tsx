@@ -166,7 +166,7 @@ export default function ContactPage() {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-lg font-bold text-gray-800 mb-3">How do I apply for a property?</h3>
               <p className="text-gray-600">
-                Visit any property detail page and click "Apply Now" to fill out an application. we&apos;ll review your information and contact you within 24 hours.
+                Visit any property detail page and click &quot;Apply Now&quot; to fill out an application. we&apos;ll review your information and contact you within 24 hours.
               </p>
             </div>
 
