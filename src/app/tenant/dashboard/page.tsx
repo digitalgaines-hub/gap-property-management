@@ -17,7 +17,7 @@ export default function TenantDashboard() {
 
   useEffect(() => {
     // Get tenant session from localStorage
-    const session = localStorage.getItem(&apos;tenantSession');
+    const session = localStorage.getItem('tenantSession');
     if (session) {
       setTenant(JSON.parse(session));
     }
@@ -25,7 +25,7 @@ export default function TenantDashboard() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem(&apos;tenantSession');
+    localStorage.removeItem('tenantSession');
     window.location.href = '/';
   };
 
@@ -50,7 +50,7 @@ export default function TenantDashboard() {
       description: 'View your lease agreement and documents',
       href: '/tenant/documents',
       color: 'bg-blue-50 hover:bg-blue-100',
-      iconColor: &apos;text-blue-600',
+      iconColor: 'text-blue-600',
     },
     {
       icon: FaCreditCard,
@@ -58,7 +58,7 @@ export default function TenantDashboard() {
       description: 'Pay your rent online',
       href: '/tenant/payments',
       color: 'bg-green-50 hover:bg-green-100',
-      iconColor: &apos;text-green-600',
+      iconColor: 'text-green-600',
     },
     {
       icon: FaWrench,
@@ -66,7 +66,7 @@ export default function TenantDashboard() {
       description: 'Submit maintenance requests',
       href: '/tenant/maintenance',
       color: 'bg-orange-50 hover:bg-orange-100',
-      iconColor: &apos;text-orange-600',
+      iconColor: 'text-orange-600',
     },
     {
       icon: FaUser,
@@ -74,7 +74,7 @@ export default function TenantDashboard() {
       description: 'Manage your account',
       href: '/tenant/profile',
       color: 'bg-purple-50 hover:bg-purple-100',
-      iconColor: &apos;text-purple-600',
+      iconColor: 'text-purple-600',
     },
   ];
 
