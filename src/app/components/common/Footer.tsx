@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FaEnvelope, Phone, MapPin, Clock } from 'react-icons/fa';
+import { FaEnvelope, FaPhone, FaMapPin, FaClock } from 'react-icons/fa';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -22,7 +22,7 @@ export default function Footer() {
             </p>
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
-                <Phone className="w-4 h-4 text-blue-500" />
+                <FaPhone className="w-4 h-4 text-blue-500" />
                 <span>(502) 783-7573</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -96,14 +96,14 @@ export default function Footer() {
             <h3 className="font-bold text-white mb-4">Office Hours</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
-                <Clock className="w-4 h-4 text-blue-500 mt-1" />
+                <FaClock className="w-4 h-4 text-blue-500 mt-1" />
                 <div>
                   <p className="font-semibold">Monday - Friday</p>
                   <p className="text-gray-400">9:00 AM - 5:00 PM</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-blue-500 mt-1" />
+                <FaMapPin className="w-4 h-4 text-blue-500 mt-1" />
                 <div>
                   <p className="font-semibold">Saturday & Sunday</p>
                   <p className="text-gray-400">By Appointment</p>
