@@ -23,11 +23,11 @@ export default function Footer() {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <FaPhone className="w-4 h-4 text-blue-500" />
-                <span>(859) 555-0123</span>
+                <span>(502) 783-7573</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <FaEnvelope className="w-4 h-4 text-blue-500" />
-                <span>info@gaproperty.com</span>
+                <span>dejon@digitalgaines.com</span>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { FaMapPin, FaBed, FaRuler, FaDollarSign, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 interface Property {
@@ -22,7 +22,6 @@ interface Property {
   applicationRequired?: boolean;
 }
 
-// Sample property data - replace with API call using params.id later
 const propertiesData: Record<string, Property> = {
   '1': {
     id: '1',
@@ -78,8 +77,9 @@ const propertiesData: Record<string, Property> = {
   },
 };
 
-export default function PropertyDetailPage({ params }: { params: { id: string } }) {
-  const property = propertiesData[params.id];
+export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string>('');
+  const [property, setProperty] = useState<Property | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -92,21 +92,23 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
     message: '',
   });
 
-  if (!property) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Property Not Found</h1>
-          <p className="text-gray-600">The property you're looking for doesn't exist.</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    params.then((p) => {
+      setId(p.id);
+      setProperty(propertiesData[p.id] || null);
+    });
+  }, [params]);
 
   const images = [
-    '/placeholder-1.jpg',
-    '/placeholder-2.jpg',
-    '/placeholder-3.jpg',
+    '/images/properties/irvine-street/irvine-office-1.jpg',
+    '/images/properties/irvine-street/irvine-office-2.jpg',
+    '/images/properties/irvine-street/irvine-office-3.jpg',
+    '/images/properties/irvine-street/irvine-office-4.jpg',
+    '/images/properties/irvine-street/irvine-office-5.jpg',
+    '/images/properties/irvine-street/irvine-office-6.jpg',
+    '/images/properties/irvine-street/irvine-office-7.jpg',
+    '/images/properties/irvine-street/irvine-office-8.jpg',
+    '/images/properties/irvine-street/irvine-office-9.jpg',
   ];
 
   const handlePreviousImage = () => {
@@ -138,14 +140,25 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
     setShowApplicationForm(false);
   };
 
+  if (!property) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">Loading property...</h1>
+          <p className="text-gray-600">Please wait while we load the property details.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Breadcrumb */}
       <div className="bg-gray-50 py-4 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <a href="/" className="text-blue-600 hover:text-blue-700 text-sm">
+          <Link href="/" className="text-blue-600 hover:text-blue-700 text-sm">
             Home
-          </a>
+          </Link>
           <span className="text-gray-400 mx-2">/</span>
           <span className="text-gray-600 text-sm">{property.name}</span>
         </div>
@@ -159,9 +172,11 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
               {/* Image Gallery */}
               <div className="mb-8">
                 <div className="relative w-full h-96 bg-gray-200 rounded-lg overflow-hidden group">
-                  <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                    <span className="text-gray-500 text-lg">Property Image</span>
-                  </div>
+                  <img
+                    src={images[currentImageIndex]}
+                    alt={`${property.name} - Image ${currentImageIndex + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
+                  />
                   {/* Previous Button */}
                   <button
                     onClick={handlePreviousImage}
@@ -194,7 +209,7 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-3xl font-bold text-blue-600">${property.price.toLocaleString()}</div>
+                    <div className="text-3xl font-bold text-blue-600">$600 - $3,500</div>
                     <p className="text-gray-600">Monthly Rent</p>
                   </div>
                 </div>
@@ -224,9 +239,11 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                     </div>
                   )}
                   <div className="text-center">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${
-                      property.type === 'Commercial' ? 'bg-blue-600' : 'bg-green-600'
-                    }`}>
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${
+                        property.type === 'Commercial' ? 'bg-blue-600' : 'bg-green-600'
+                      }`}
+                    >
                       {property.type}
                     </span>
                   </div>
@@ -282,7 +299,7 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
               <div className="bg-gray-50 p-6 rounded-lg mb-6 sticky top-20">
                 <div className="mb-6">
                   <p className="text-sm text-gray-600 mb-2">Monthly Rent</p>
-                  <p className="text-4xl font-bold text-blue-600">${property.price.toLocaleString()}</p>
+                  <p className="text-4xl font-bold text-blue-600">$600 - $3,500</p>
                 </div>
 
                 <button
@@ -292,9 +309,12 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                   Apply Now
                 </button>
 
-                <button className="w-full border-2 border-blue-600 text-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-50 transition">
+                <Link
+                  href="/contact"
+                  className="w-full border-2 border-blue-600 text-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
+                >
                   Schedule Tour
-                </button>
+                </Link>
 
                 {/* Contact Info */}
                 <div className="mt-8 pt-6 border-t border-gray-200">
@@ -302,8 +322,8 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                   <div className="space-y-3 text-sm">
                     <div>
                       <p className="text-gray-600">Call us</p>
-                      <a href="tel:(859)555-0123" className="text-blue-600 font-semibold hover:text-blue-700">
-                        (859) 555-0123
+                      <a href="tel:(859)333-9244" className="text-blue-600 font-semibold hover:text-blue-700">
+                        (859) 333-9244
                       </a>
                     </div>
                     <div>

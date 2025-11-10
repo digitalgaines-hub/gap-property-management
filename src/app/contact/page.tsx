@@ -1,42 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { FaPhone, FaEnvelope, FaMapPin, FaClock, FaLinkedin } from 'react-icons/fa';
+import { FaPhone, FaEnvelope, FaMapPin, FaClock } from 'react-icons/fa';
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: '',
-  });
-
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleFormChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Contact form submitted:', formData);
-    setSubmitted(true);
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      subject: '',
-      message: '',
-    });
-    setTimeout(() => setSubmitted(false), 5000);
-  };
-
   return (
     <>
       {/* Page Header */}
@@ -65,10 +31,10 @@ export default function ContactPage() {
                     <div>
                       <h4 className="font-semibold text-gray-800 mb-1">Phone</h4>
                       <a
-                        href="tel:859-333-9244"
+                        href="tel:502-783-7573"
                         className="text-blue-600 hover:text-blue-700 font-semibold text-lg"
                       >
-                        (859) 333-9244
+                        (502) 783-7573
                       </a>
                       <p className="text-gray-600 text-sm mt-1">Mon-Fri: 9:00 AM - 5:00 PM</p>
                     </div>
@@ -82,10 +48,10 @@ export default function ContactPage() {
                     <div>
                       <h4 className="font-semibold text-gray-800 mb-1">Email</h4>
                       <a
-                        href="mailto:info@gaproperty.com"
+                        href="mailto:dejon@digitalgaines.com"
                         className="text-blue-600 hover:text-blue-700 font-semibold"
                       >
-                        info@gaproperty.com
+                        dejon@digitalgaines.com
                       </a>
                     </div>
                   </div>
@@ -132,141 +98,57 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <a
-                      href="tel:859-333-9244"
+                      href="tel:502-783-7573"
                       className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
                     >
-                      (859) 333-9244
+                      (502) 783-7573
                     </a>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Contact Form */}
+            {/* Quick Contact Methods */}
             <div className="lg:col-span-2">
-              <div className="bg-gray-50 p-8 rounded-lg">
-                <h2 className="text-3xl font-bold text-gray-800 mb-6">Send us a Message</h2>
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-8 rounded-lg border border-blue-200">
+                <h2 className="text-3xl font-bold text-gray-800 mb-6">Get in Touch</h2>
+                
+                <p className="text-gray-700 text-lg mb-8">
+                  We'd love to hear from you! Reach out to us directly via phone or email, and we'll be happy to assist you with any questions about our properties or services.
+                </p>
 
-                {submitted && (
-                  <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-800 rounded-lg">
-                    Thank you for your message! We'll get back to you as soon as possible.
-                  </div>
-                )}
-
-                <form onSubmit={handleFormSubmit} className="space-y-5">
-                  {/* Name Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-6">
+                  {/* Call */}
+                  <div className="flex items-start gap-4 bg-white p-6 rounded-lg">
+                    <FaPhone className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" />
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleFormChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        placeholder="John"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleFormChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        placeholder="Doe"
-                      />
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">Give us a Call</h3>
+                      <a
+                        href="tel:502-783-7573"
+                        className="text-blue-600 hover:text-blue-700 font-semibold text-lg"
+                      >
+                        (502) 783-7573
+                      </a>
+                      <p className="text-gray-600 text-sm mt-2">Mon-Fri: 9:00 AM - 5:00 PM</p>
+                      <p className="text-gray-600 text-sm">Emergency support available 24/7</p>
                     </div>
                   </div>
 
                   {/* Email */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleFormChange}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      placeholder="john@example.com"
-                    />
+                  <div className="flex items-start gap-4 bg-white p-6 rounded-lg">
+                    <FaEnvelope className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" />
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">Send us an Email</h3>
+                      <a
+                        href="mailto:dejon@digitalgaines.com"
+                        className="text-blue-600 hover:text-blue-700 font-semibold text-lg"
+                      >
+                        dejon@digitalgaines.com
+                      </a>
+                      <p className="text-gray-600 text-sm mt-2">We typically respond within 24 business hours</p>
+                    </div>
                   </div>
-
-                  {/* Phone */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleFormChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      placeholder="(859) 555-0123"
-                    />
-                  </div>
-
-                  {/* Subject */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Subject
-                    </label>
-                    <select
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleFormChange}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      <option value="">Select a subject</option>
-                      <option value="property-inquiry">Property Inquiry</option>
-                      <option value="maintenance-issue">Maintenance Issue</option>
-                      <option value="lease-question">Lease Question</option>
-                      <option value="payment-issue">Payment Issue</option>
-                      <option value="general">General Question</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  {/* Message */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Message
-                    </label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleFormChange}
-                      required
-                      rows={6}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      placeholder="Tell us how we can help..."
-                    ></textarea>
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-                  >
-                    Send Message
-                  </button>
-                </form>
-
-                <p className="text-gray-600 text-sm mt-6 text-center">
-                  We typically respond within 24 business hours.
-                </p>
+                </div>
               </div>
             </div>
           </div>
@@ -305,14 +187,14 @@ export default function ContactPage() {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-lg font-bold text-gray-800 mb-3">How do I request maintenance?</h3>
               <p className="text-gray-600">
-                Tenants can submit maintenance requests through the tenant portal or call us at (859) 333-9244. Emergency issues are available 24/7.
+                Tenants can submit maintenance requests through the tenant portal or call us at (502) 783-7573. Emergency issues are available 24/7.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-lg font-bold text-gray-800 mb-3">Is there emergency support available?</h3>
               <p className="text-gray-600">
-                Yes! Call (859) 333-9244 for urgent maintenance issues outside office hours. We have emergency support available.
+                Yes! Call (502) 783-7573 for urgent maintenance issues outside office hours. We have emergency support available.
               </p>
             </div>
 
