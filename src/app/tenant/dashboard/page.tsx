@@ -103,7 +103,7 @@ export default function TenantDashboard() {
         <div className="mb-12">
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-8">
             <h1 className="text-4xl font-bold mb-2">Welcome back, {tenant.name}!</h1>
-            <p className="text-blue-100">Here's your tenant portal dashboard</p>
+            <p className="text-blue-100">Here&apos;s your tenant portal dashboard</p>
             <p className="text-blue-200 text-sm mt-2">Account: {tenant.email}</p>
           </div>
         </div>
