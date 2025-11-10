@@ -10,7 +10,7 @@ export default function ContactPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Contact Us</h1>
           <p className="text-blue-100 text-lg max-w-2xl mx-auto">
-            Have questions about our properties or services? Get in touch with our team. We're here to help.
+            Have questions about our properties or services? Get in touch with our team. We&apos;re here to help.
           </p>
         </div>
       </section>
@@ -114,7 +114,7 @@ export default function ContactPage() {
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">Get in Touch</h2>
                 
                 <p className="text-gray-700 text-lg mb-8">
-                  We'd love to hear from you! Reach out to us directly via phone or email, and we'll be happy to assist you with any questions about our properties or services.
+                  We&apos;d love to hear from you! Reach out to us directly via phone or email, and we&apos;ll be happy to assist you with any questions about our properties or services.
                 </p>
 
                 <div className="space-y-6">
@@ -166,14 +166,14 @@ export default function ContactPage() {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-lg font-bold text-gray-800 mb-3">How do I apply for a property?</h3>
               <p className="text-gray-600">
-                Visit any property detail page and click "Apply Now" to fill out an application. We'll review your information and contact you within 24 hours.
+                Visit any property detail page and click "Apply Now" to fill out an application. we&apos;ll review your information and contact you within 24 hours.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-lg font-bold text-gray-800 mb-3">What are your office hours?</h3>
               <p className="text-gray-600">
-                We're open Monday through Friday, 9:00 AM to 5:00 PM. Weekend appointments are available by request.
+                We&apos;re open Monday through Friday, 9:00 AM to 5:00 PM. Weekend appointments are available by request.
               </p>
             </div>
 
