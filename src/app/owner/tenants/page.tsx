@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { FaUsers, FaEnvelope, FaPhone } from 'react-icons/fa'
+import { FaUsers, FaEnvelope, FaPhone, FaPlus, FaTimes, FaCheckCircle } from 'react-icons/fa'
 
 interface Tenant {
   id: string
@@ -23,33 +23,70 @@ interface Tenant {
 export default function OwnerTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [loading, setLoading] = useState(true)
+  const [showInvite, setShowInvite] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteName, setInviteName] = useState('')
+  const [inviting, setInviting] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const [inviteSuccess, setInviteSuccess] = useState('')
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('profiles')
-        .select(`
-          id, full_name, email, phone, created_at,
-          leases (
-            id, lease_start, lease_end, monthly_rent, status,
-            unit:units ( unit_number, property:properties ( name ) )
-          )
-        `)
-        .eq('role', 'tenant')
-        .order('created_at', { ascending: false })
-
-      setTenants((data ?? []).map(t => ({
-        ...t,
-        leases: (t.leases ?? []).map((l: Record<string, unknown>) => ({
-          ...l,
-          unit: l.unit as { unit_number: string; property: { name: string } } | null,
-        })),
-      })) as Tenant[])
-      setLoading(false)
-    }
-    load()
+    loadTenants()
   }, [])
+
+  async function loadTenants() {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('profiles')
+      .select(`
+        id, full_name, email, phone, created_at,
+        leases (
+          id, lease_start, lease_end, monthly_rent, status,
+          unit:units ( unit_number, property:properties ( name ) )
+        )
+      `)
+      .eq('role', 'tenant')
+      .order('created_at', { ascending: false })
+
+    setTenants((data ?? []).map(t => ({
+      ...t,
+      leases: (t.leases ?? []).map((l: Record<string, unknown>) => ({
+        ...l,
+        unit: l.unit as { unit_number: string; property: { name: string } } | null,
+      })),
+    })) as Tenant[])
+    setLoading(false)
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault()
+    setInviting(true)
+    setInviteError('')
+    setInviteSuccess('')
+
+    const res = await fetch('/api/tenants/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: inviteEmail, fullName: inviteName }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setInviteError(data.error || 'Failed to invite tenant')
+      setInviting(false)
+      return
+    }
+
+    setInviteSuccess(`Invitation sent to ${inviteEmail}`)
+    setInviteEmail('')
+    setInviteName('')
+    setInviting(false)
+    setShowInvite(false)
+    loadTenants()
+
+    setTimeout(() => setInviteSuccess(''), 5000)
+  }
 
   if (loading) {
     return <div className="text-center py-12 text-gray-500">Loading tenants...</div>
@@ -57,7 +94,80 @@ export default function OwnerTenants() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">Tenant Management</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Tenant Management</h1>
+        <button
+          onClick={() => { setShowInvite(!showInvite); setInviteError(''); }}
+          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+        >
+          {showInvite ? <FaTimes /> : <FaPlus />}
+          {showInvite ? 'Cancel' : 'Add Tenant'}
+        </button>
+      </div>
+
+      {inviteSuccess && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+          <FaCheckCircle className="text-green-600 flex-shrink-0" />
+          <span className="text-green-700">{inviteSuccess}</span>
+        </div>
+      )}
+
+      {showInvite && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Invite New Tenant</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Enter the tenant&apos;s email and name. They will receive an invitation email with a sign-in link.
+          </p>
+
+          {inviteError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {inviteError}
+            </div>
+          )}
+
+          <form onSubmit={handleInvite} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="tenant@example.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={inviteName}
+                  onChange={e => setInviteName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={inviting}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {inviting ? 'Sending...' : 'Send Invitation'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowInvite(false)}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {tenants.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">

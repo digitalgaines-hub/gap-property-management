@@ -26,6 +26,24 @@ function LoginForm() {
       return;
     }
 
+    // Check if account exists before sending magic link
+    try {
+      const checkRes = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const checkData = await checkRes.json();
+
+      if (!checkData.exists) {
+        setError('No account found. Contact your property manager.');
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // If check fails, fall through to send anyway
+    }
+
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email,
