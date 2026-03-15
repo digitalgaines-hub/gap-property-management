@@ -1,50 +1,124 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
+import { FaEnvelope } from 'react-icons/fa';
+import { createClient } from '@/lib/supabase/client';
 
-export default function TenantLoginPage() {
-  const router = useRouter();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [error, setError] = useState('');
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const authError = searchParams.get('error');
+
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState(authError === 'auth' ? 'Authentication failed. Please try again.' : '');
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Simulate authentication - replace with real auth later
-    setTimeout(() => {
-      if (formData.email && formData.password) {
-        // Store tenant session in localStorage (for demo - use secure session later)
-        localStorage.setItem(
-          'tenantSession',
-          JSON.stringify({
-            email: formData.email,
-            name: 'John Doe',
-            tenantId: '123',
-            loginTime: new Date().toISOString(),
-          })
-        );
-        router.push('/tenant/dashboard');
-      } else {
-        setError('Please enter both email and password');
-        setLoading(false);
-      }
-    }, 800);
+    if (!email) {
+      setError('Please enter your email address');
+      setLoading(false);
+      return;
+    }
+
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      },
+    });
+
+    if (signInError) {
+      setError(signInError.message);
+      setLoading(false);
+      return;
+    }
+
+    setEmailSent(true);
+    setLoading(false);
   };
 
+  return (
+    <>
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-800 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      {emailSent ? (
+        /* Success State */
+        <div className="text-center">
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="text-green-600 text-4xl mb-3">&#9993;</div>
+            <p className="text-gray-800 font-semibold mb-2">Magic link sent!</p>
+            <p className="text-gray-600 text-sm">
+              We sent a sign-in link to <span className="font-semibold">{email}</span>.
+              Click the link in your email to access your tenant portal.
+            </p>
+          </div>
+          <p className="text-gray-500 text-sm mb-4">
+            Didn&apos;t receive the email? Check your spam folder or try again.
+          </p>
+          <button
+            onClick={() => {
+              setEmailSent(false);
+              setError('');
+            }}
+            className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
+          >
+            Try a different email
+          </button>
+        </div>
+      ) : (
+        /* Login Form */
+        <form onSubmit={handleLogin} className="space-y-5">
+          {/* Email Field */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Email Address
+            </label>
+            <div className="relative">
+              <FaEnvelope className="absolute left-3 top-3 text-gray-400" />
+              <input
+                type="email"
+                name="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Info Text */}
+          <p className="text-gray-500 text-sm">
+            We&apos;ll send you a secure sign-in link. No password needed.
+          </p>
+
+          {/* Login Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Sending link...' : 'Send Sign-In Link'}
+          </button>
+        </form>
+      )}
+    </>
+  );
+}
+
+export default function TenantLoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -61,74 +135,11 @@ export default function TenantLoginPage() {
             <p className="text-gray-600 mt-2">Sign in to your account</p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-800 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <FaEnvelope className="absolute left-3 top-3 text-gray-400" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="your@email.com"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <FaLock className="absolute left-3 top-3 text-gray-400" />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-              </div>
-            </div>
-
-            {/* Forgot Password Link */}
-            <div className="text-right">
-              <a href="#" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                Forgot password?
-              </a>
-            </div>
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-semibold text-gray-800 mb-2">Demo Credentials:</p>
-            <p className="text-sm text-gray-600">Email: demo@tenant.com</p>
-            <p className="text-sm text-gray-600">Password: demo123</p>
-          </div>
+          <Suspense fallback={
+            <div className="text-center py-4 text-gray-500">Loading...</div>
+          }>
+            <LoginForm />
+          </Suspense>
 
           {/* Help Text */}
           <div className="mt-8 text-center text-sm text-gray-600">
@@ -148,7 +159,7 @@ export default function TenantLoginPage() {
 
         {/* Footer Info */}
         <div className="text-center mt-8 text-blue-100 text-sm">
-          <p>Secure login • Data encrypted • 24/7 Support</p>
+          <p>Secure login &bull; Data encrypted &bull; 24/7 Support</p>
         </div>
       </div>
     </div>

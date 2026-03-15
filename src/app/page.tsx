@@ -238,7 +238,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-gray-800 mb-12 text-center">Get In Touch</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             <div className="bg-blue-50 p-8 rounded-lg text-center border border-blue-200">
               <FaPhone className="w-8 h-8 text-blue-600 mx-auto mb-3" />
               <h3 className="text-xl font-bold text-gray-800 mb-2">Call Us</h3>
@@ -246,15 +246,6 @@ export default function Home() {
                 (502) 783-7573
               </a>
               <p className="text-gray-600 text-sm mt-2">Mon-Fri: 9 AM - 5 PM</p>
-            </div>
-
-            <div className="bg-blue-50 p-8 rounded-lg text-center border border-blue-200">
-              <FaPhone className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Email</h3>
-              <a href="mailto:dejon@digitalgaines.com" className="text-blue-600 font-semibold hover:text-blue-700">
-                dejon@digitalgaines.com
-              </a>
-              <p className="text-gray-600 text-sm mt-2">We respond within 24 hours</p>
             </div>
 
             <div className="bg-blue-50 p-8 rounded-lg text-center border border-blue-200">

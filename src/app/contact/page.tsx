@@ -1,6 +1,6 @@
 'use client';
 
-import { FaPhone, FaEnvelope, FaMapPin, FaClock } from 'react-icons/fa';
+import { FaPhone, FaMapPin, FaClock } from 'react-icons/fa';
 
 export default function ContactPage() {
   return (
@@ -37,22 +37,6 @@ export default function ContactPage() {
                         (502) 783-7573
                       </a>
                       <p className="text-gray-600 text-sm mt-1">Mon-Fri: 9:00 AM - 5:00 PM</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="mb-6">
-                  <div className="flex items-start gap-4">
-                    <FaEnvelope className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-1">Email</h4>
-                      <a
-                        href="mailto:dejon@digitalgaines.com"
-                        className="text-blue-600 hover:text-blue-700 font-semibold"
-                      >
-                        dejon@digitalgaines.com
-                      </a>
                     </div>
                   </div>
                 </div>
@@ -134,18 +118,14 @@ export default function ContactPage() {
                     </div>
                   </div>
 
-                  {/* Email */}
+                  {/* Visit */}
                   <div className="flex items-start gap-4 bg-white p-6 rounded-lg">
-                    <FaEnvelope className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" />
+                    <FaMapPin className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" />
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">Send us an Email</h3>
-                      <a
-                        href="mailto:dejon@digitalgaines.com"
-                        className="text-blue-600 hover:text-blue-700 font-semibold text-lg"
-                      >
-                        dejon@digitalgaines.com
-                      </a>
-                      <p className="text-gray-600 text-sm mt-2">We typically respond within 24 business hours</p>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">Visit Our Office</h3>
+                      <p className="text-gray-800 font-semibold text-lg">244 W. Irvine Street</p>
+                      <p className="text-gray-600 text-sm mt-1">Richmond, KY 40475</p>
+                      <p className="text-gray-600 text-sm">Mon-Fri: 9:00 AM - 5:00 PM</p>
                     </div>
                   </div>
                 </div>

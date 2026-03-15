@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FaEnvelope, FaPhone, FaMapPin, FaClock } from 'react-icons/fa';
+import { FaPhone, FaMapPin, FaClock } from 'react-icons/fa';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -26,8 +26,8 @@ export default function Footer() {
                 <span>(502) 783-7573</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <FaEnvelope className="w-4 h-4 text-blue-500" />
-                <span>dejon@digitalgaines.com</span>
+                <FaMapPin className="w-4 h-4 text-blue-500" />
+                <span>244 W. Irvine St, Richmond, KY 40475</span>
               </div>
             </div>
           </div>
