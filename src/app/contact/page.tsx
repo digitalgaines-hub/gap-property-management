@@ -1,8 +1,46 @@
 'use client';
 
-import { FaPhone, FaMapPin, FaClock } from 'react-icons/fa';
+import { useState } from 'react';
+import { FaPhone, FaMapPin, FaClock, FaCheckCircle } from 'react-icons/fa';
+import { useRecaptcha } from '@/lib/recaptcha';
 
 export default function ContactPage() {
+  const { executeRecaptcha } = useRecaptcha();
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('submitting');
+    setErrorMessage('');
+
+    try {
+      const recaptchaToken = await executeRecaptcha('contact');
+
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, recaptchaToken }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to submit');
+      }
+
+      setStatus('success');
+      setFormData({ name: '', email: '', phone: '', message: '' });
+    } catch (err) {
+      setStatus('error');
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    }
+  };
+
   return (
     <>
       {/* Page Header */}
@@ -92,43 +130,109 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Quick Contact Methods */}
+            {/* Contact Form */}
             <div className="lg:col-span-2">
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-8 rounded-lg border border-blue-200">
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">Get in Touch</h2>
-                
-                <p className="text-gray-700 text-lg mb-8">
-                  We&apos;d love to hear from you! Reach out to us directly via phone or email, and we&apos;ll be happy to assist you with any questions about our properties or services.
-                </p>
 
-                <div className="space-y-6">
-                  {/* Call */}
-                  <div className="flex items-start gap-4 bg-white p-6 rounded-lg">
-                    <FaPhone className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" />
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">Give us a Call</h3>
-                      <a
-                        href="tel:502-783-7573"
-                        className="text-blue-600 hover:text-blue-700 font-semibold text-lg"
-                      >
-                        (502) 783-7573
-                      </a>
-                      <p className="text-gray-600 text-sm mt-2">Mon-Fri: 9:00 AM - 5:00 PM</p>
-                      <p className="text-gray-600 text-sm">Emergency support available 24/7</p>
-                    </div>
+                {status === 'success' ? (
+                  <div className="text-center py-12">
+                    <FaCheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Message Sent!</h3>
+                    <p className="text-gray-600 mb-6">We&apos;ll get back to you as soon as possible.</p>
+                    <button
+                      onClick={() => setStatus('idle')}
+                      className="text-blue-600 hover:text-blue-700 font-semibold"
+                    >
+                      Send another message
+                    </button>
                   </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                        placeholder="Your full name"
+                      />
+                    </div>
 
-                  {/* Visit */}
-                  <div className="flex items-start gap-4 bg-white p-6 rounded-lg">
-                    <FaMapPin className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" />
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">Visit Our Office</h3>
-                      <p className="text-gray-800 font-semibold text-lg">244 W. Irvine Street</p>
-                      <p className="text-gray-600 text-sm mt-1">Richmond, KY 40475</p>
-                      <p className="text-gray-600 text-sm">Mon-Fri: 9:00 AM - 5:00 PM</p>
+                      <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Email *
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                        placeholder="you@example.com"
+                      />
                     </div>
-                  </div>
-                </div>
+
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-1">
+                        Message *
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
+                        required
+                        rows={5}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+                        placeholder="How can we help you?"
+                      />
+                    </div>
+
+                    {status === 'error' && (
+                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                        {errorMessage}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={status === 'submitting'}
+                      className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {status === 'submitting' ? 'Sending...' : 'Send Message'}
+                    </button>
+
+                    <p className="text-xs text-gray-500 text-center">
+                      This site is protected by reCAPTCHA and the Google{' '}
+                      <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a> and{' '}
+                      <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noopener noreferrer">Terms of Service</a> apply.
+                    </p>
+                  </form>
+                )}
               </div>
             </div>
           </div>

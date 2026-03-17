@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { FaMapPin, FaBed, FaRuler, FaChevronLeft, FaChevronRight, FaCheckCircle } from 'react-icons/fa'
 import { createClient } from '@/lib/supabase/client'
+import { useRecaptcha } from '@/lib/recaptcha'
 
 interface Unit {
   id: string
@@ -64,6 +65,9 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ slug:
     moveInDate: '', employmentStatus: '', message: '',
   })
   const [formSubmitted, setFormSubmitted] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [formSubmitting, setFormSubmitting] = useState(false)
+  const { executeRecaptcha } = useRecaptcha()
 
   useEffect(() => {
     params.then(async (p) => {
@@ -98,22 +102,38 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ slug:
     e.preventDefault()
     if (!property) return
 
-    const supabase = createClient()
-    await supabase.from('inquiries').insert({
-      name: `${formData.firstName} ${formData.lastName}`,
-      email: formData.email,
-      phone: formData.phone,
-      inquiry_type: 'leasing',
-      property_id: property.id,
-      message: `Move-in: ${formData.moveInDate}\nEmployment: ${formData.employmentStatus}\n\n${formData.message}`,
-    })
+    setFormSubmitting(true)
+    setFormError('')
 
-    setFormSubmitted(true)
-    setFormData({ firstName: '', lastName: '', email: '', phone: '', moveInDate: '', employmentStatus: '', message: '' })
-    setTimeout(() => {
-      setShowApplicationForm(false)
-      setFormSubmitted(false)
-    }, 3000)
+    try {
+      const recaptchaToken = await executeRecaptcha('lease_application')
+
+      const res = await fetch('/api/inquiries/lease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          propertyId: property.id,
+          recaptchaToken,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to submit application')
+      }
+
+      setFormSubmitted(true)
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', moveInDate: '', employmentStatus: '', message: '' })
+      setTimeout(() => {
+        setShowApplicationForm(false)
+        setFormSubmitted(false)
+      }, 3000)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setFormSubmitting(false)
+    }
   }
 
   if (loading) {
@@ -375,9 +395,16 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ slug:
                   <option value="student">Student</option>
                 </select>
                 <textarea name="message" placeholder="Additional Information (Optional)" value={formData.message} onChange={handleFormChange} rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                {formError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {formError}
+                  </div>
+                )}
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={() => setShowApplicationForm(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-800 rounded-lg font-semibold hover:bg-gray-50 transition">Cancel</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">Submit Application</button>
+                  <button type="submit" disabled={formSubmitting} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    {formSubmitting ? 'Submitting...' : 'Submit Application'}
+                  </button>
                 </div>
               </form>
             )}
