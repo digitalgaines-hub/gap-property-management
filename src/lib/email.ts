@@ -4,7 +4,7 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null
 
-const FROM_EMAIL = 'G&A Property Management <onboarding@resend.dev>'
+const FROM_EMAIL = 'G&A Property Management <noreply@gandamanagement.com>'
 
 export async function sendPaymentReceipt(params: {
   to: string
@@ -91,6 +91,48 @@ export async function sendMaintenanceUpdate(params: {
             ${params.message ? `<p style="margin: 8px 0 0; color: #4b5563;">${params.message}</p>` : ''}
           </div>
           <p style="color: #6b7280; font-size: 14px;">Log in to the tenant portal to view full details.</p>
+        </div>
+      </div>
+    `,
+  })
+}
+
+export async function sendInquiryNotification(params: {
+  to: string
+  name: string
+  email: string
+  phone: string | null
+  inquiryType: string
+  message: string
+}) {
+  if (!resend) return
+
+  const typeLabel = params.inquiryType === 'leasing' ? 'Lease Application'
+    : params.inquiryType === 'tour_request' ? 'Tour Request'
+    : params.inquiryType === 'maintenance_emergency' ? 'Maintenance Emergency'
+    : 'General Inquiry'
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: params.to,
+    subject: `New ${typeLabel} from ${params.name}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #2563EB, #1E40AF); padding: 24px; border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">G&A Property Management</h1>
+        </div>
+        <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+          <h2 style="color: #1f2937; margin-top: 0;">New ${typeLabel}</h2>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 8px 0; color: #6b7280;">Name</td><td style="padding: 8px 0; text-align: right; color: #1f2937;">${params.name}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280;">Email</td><td style="padding: 8px 0; text-align: right; color: #1f2937;"><a href="mailto:${params.email}">${params.email}</a></td></tr>
+            ${params.phone ? `<tr><td style="padding: 8px 0; color: #6b7280;">Phone</td><td style="padding: 8px 0; text-align: right; color: #1f2937;"><a href="tel:${params.phone}">${params.phone}</a></td></tr>` : ''}
+            <tr><td style="padding: 8px 0; color: #6b7280;">Type</td><td style="padding: 8px 0; text-align: right; color: #1f2937;">${typeLabel}</td></tr>
+          </table>
+          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 0; color: #4b5563; white-space: pre-wrap;">${params.message}</p>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">Log in to the owner portal to view and respond.</p>
         </div>
       </div>
     `,

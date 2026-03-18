@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { FaHome, FaUsers, FaWrench, FaFileAlt, FaChartBar, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa'
+import { FaHome, FaUsers, FaWrench, FaFileAlt, FaChartBar, FaEnvelope, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa'
 import { createContext, useContext, useState } from 'react'
 
 export interface OwnerUser {
@@ -30,6 +30,7 @@ const navItems = [
   { href: '/owner/tenants', label: 'Tenants', icon: FaUsers },
   { href: '/owner/maintenance', label: 'Maintenance', icon: FaWrench },
   { href: '/owner/documents', label: 'Documents', icon: FaFileAlt },
+  { href: '/owner/inquiries', label: 'Inquiries', icon: FaEnvelope },
   { href: '/owner/financials', label: 'Financials', icon: FaChartBar },
 ]
 

@@ -1,16 +1,17 @@
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { sendPaymentReceipt, sendPaymentFailed } from '@/lib/email'
 
-// Use service role client for webhook (no user session)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function POST(req: Request) {
+  // Use service role client for webhook (no user session)
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const stripe = getStripe()
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
 

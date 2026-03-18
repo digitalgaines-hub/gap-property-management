@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { verifyRecaptcha } from '@/lib/recaptcha-verify'
+import { sendInquiryNotification } from '@/lib/email'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -34,6 +35,19 @@ export async function POST(req: Request) {
     if (error) {
       console.error('Lease inquiry insert error:', error)
       return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 })
+    }
+
+    // Notify owner via email (fire and forget)
+    const fullMessage = `Move-in: ${moveInDate}\nEmployment: ${employmentStatus}\n\n${message || ''}`
+    if (process.env.OWNER_EMAIL) {
+      sendInquiryNotification({
+        to: process.env.OWNER_EMAIL,
+        name: `${firstName} ${lastName}`,
+        email,
+        phone,
+        inquiryType: 'leasing',
+        message: fullMessage,
+      }).catch(() => {})
     }
 
     return NextResponse.json({ success: true })

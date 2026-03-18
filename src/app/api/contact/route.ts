@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { verifyRecaptcha } from '@/lib/recaptcha-verify'
+import { sendInquiryNotification } from '@/lib/email'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -29,6 +30,18 @@ export async function POST(req: Request) {
     if (error) {
       console.error('Contact insert error:', error)
       return NextResponse.json({ error: 'Failed to submit inquiry' }, { status: 500 })
+    }
+
+    // Notify owner via email (fire and forget)
+    if (process.env.OWNER_EMAIL) {
+      sendInquiryNotification({
+        to: process.env.OWNER_EMAIL,
+        name,
+        email,
+        phone: phone || null,
+        inquiryType: 'general',
+        message,
+      }).catch(() => {})
     }
 
     return NextResponse.json({ success: true })

@@ -1,4 +1,4 @@
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -29,6 +29,8 @@ export async function POST(req: Request) {
     if (!lease) {
       return NextResponse.json({ error: 'Lease not found' }, { status: 404 })
     }
+
+    const stripe = getStripe()
 
     // Get or create Stripe customer
     const customers = await stripe.customers.list({ email: user.email!, limit: 1 })
