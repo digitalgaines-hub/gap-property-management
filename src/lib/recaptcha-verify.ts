@@ -1,6 +1,6 @@
-const SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || ''
-
 export async function verifyRecaptcha(token: string): Promise<{ success: boolean; score: number }> {
+  const SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY || ''
+
   if (!SECRET_KEY) {
     // Skip verification in development when key is not configured
     console.warn('RECAPTCHA_SECRET_KEY not set — skipping verification')
