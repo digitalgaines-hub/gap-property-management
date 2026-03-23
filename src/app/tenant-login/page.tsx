@@ -4,7 +4,6 @@ import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FaEnvelope } from 'react-icons/fa';
-import { createClient } from '@/lib/supabase/client';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -44,16 +43,21 @@ function LoginForm() {
       // If check fails, fall through to send anyway
     }
 
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
-      },
-    });
+    try {
+      const res = await fetch('/api/auth/send-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
 
-    if (signInError) {
-      setError(signInError.message);
+      if (!res.ok) {
+        setError(data.error || 'Failed to send magic link');
+        setLoading(false);
+        return;
+      }
+    } catch {
+      setError('Failed to send magic link. Please try again.');
       setLoading(false);
       return;
     }
