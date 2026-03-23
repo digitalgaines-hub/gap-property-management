@@ -31,6 +31,12 @@ export async function POST(req: Request) {
       console.error('Contact insert error:', error)
       return NextResponse.json({ error: 'Failed to submit inquiry' }, { status: 500 })
     }
+console.log('Email env check:', { 
+      hasOwnerEmail: !!process.env.OWNER_EMAIL, 
+      hasSesKey: !!process.env.AWS_SES_ACCESS_KEY_ID,
+      hasSesSecret: !!process.env.AWS_SES_SECRET_ACCESS_KEY,
+      region: process.env.AWS_SES_REGION 
+    })
 
     // Notify owner via email (fire and forget)
     if (process.env.OWNER_EMAIL) {
