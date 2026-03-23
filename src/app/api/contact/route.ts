@@ -38,16 +38,21 @@ console.log('Email env check:', {
       region: process.env.AWS_SES_REGION 
     })
 
-    // Notify owner via email (fire and forget)
+   // Notify owner via email
     if (process.env.OWNER_EMAIL) {
-      sendInquiryNotification({
-        to: process.env.OWNER_EMAIL,
-        name,
-        email,
-        phone: phone || null,
-        inquiryType: 'general',
-        message,
-      }).catch(() => {})
+      try {
+        await sendInquiryNotification({
+          to: process.env.OWNER_EMAIL,
+          name,
+          email,
+          phone: phone || null,
+          inquiryType: 'general',
+          message,
+        })
+        console.log('Email sent successfully')
+      } catch (emailError) {
+        console.error('Email send failed:', emailError)
+      }
     }
 
     return NextResponse.json({ success: true })
