@@ -1,14 +1,34 @@
-import { Resend } from 'resend'
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
 
 const FROM_EMAIL = 'G&A Property Management <noreply@gandamanagement.com>'
 
-let _resend: Resend | null = null
+let _ses: SESClient | null = null
 
-function getResend(): Resend | null {
-  if (_resend) return _resend
-  if (!process.env.RESEND_API_KEY) return null
-  _resend = new Resend(process.env.RESEND_API_KEY)
-  return _resend
+function getSES(): SESClient | null {
+  if (_ses) return _ses
+  if (!process.env.AWS_SES_ACCESS_KEY_ID || !process.env.AWS_SES_SECRET_ACCESS_KEY) return null
+  _ses = new SESClient({
+    region: process.env.AWS_SES_REGION || 'us-east-1',
+    credentials: {
+      accessKeyId: process.env.AWS_SES_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SES_SECRET_ACCESS_KEY,
+    },
+  })
+  return _ses
+}
+
+async function sendEmail(to: string, subject: string, html: string) {
+  const ses = getSES()
+  if (!ses) return
+
+  await ses.send(new SendEmailCommand({
+    Source: FROM_EMAIL,
+    Destination: { ToAddresses: [to] },
+    Message: {
+      Subject: { Data: subject, Charset: 'UTF-8' },
+      Body: { Html: { Data: html, Charset: 'UTF-8' } },
+    },
+  }))
 }
 
 export async function sendPaymentReceipt(params: {
@@ -17,14 +37,10 @@ export async function sendPaymentReceipt(params: {
   date: string
   propertyName?: string
 }) {
-  const resend = getResend()
-  if (!resend) return
-
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: params.to,
-    subject: `Payment Receipt — $${params.amount.toLocaleString()}`,
-    html: `
+  await sendEmail(
+    params.to,
+    `Payment Receipt — $${params.amount.toLocaleString()}`,
+    `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #2563EB, #1E40AF); padding: 24px; border-radius: 8px 8px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 20px;">G&A Property Management</h1>
@@ -41,21 +57,17 @@ export async function sendPaymentReceipt(params: {
         </div>
       </div>
     `,
-  })
+  )
 }
 
 export async function sendPaymentFailed(params: {
   to: string
   amount: number
 }) {
-  const resend = getResend()
-  if (!resend) return
-
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: params.to,
-    subject: 'Payment Failed — Action Required',
-    html: `
+  await sendEmail(
+    params.to,
+    'Payment Failed — Action Required',
+    `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #2563EB, #1E40AF); padding: 24px; border-radius: 8px 8px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 20px;">G&A Property Management</h1>
@@ -68,7 +80,7 @@ export async function sendPaymentFailed(params: {
         </div>
       </div>
     `,
-  })
+  )
 }
 
 export async function sendMaintenanceUpdate(params: {
@@ -77,16 +89,12 @@ export async function sendMaintenanceUpdate(params: {
   status: string
   message?: string
 }) {
-  const resend = getResend()
-  if (!resend) return
-
   const statusLabel = params.status.replace('_', ' ').replace(/^\w/, c => c.toUpperCase())
 
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: params.to,
-    subject: `Maintenance Update: ${params.title}`,
-    html: `
+  await sendEmail(
+    params.to,
+    `Maintenance Update: ${params.title}`,
+    `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #2563EB, #1E40AF); padding: 24px; border-radius: 8px 8px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 20px;">G&A Property Management</h1>
@@ -102,7 +110,7 @@ export async function sendMaintenanceUpdate(params: {
         </div>
       </div>
     `,
-  })
+  )
 }
 
 export async function sendInquiryNotification(params: {
@@ -113,19 +121,15 @@ export async function sendInquiryNotification(params: {
   inquiryType: string
   message: string
 }) {
-  const resend = getResend()
-  if (!resend) return
-
   const typeLabel = params.inquiryType === 'leasing' ? 'Lease Application'
     : params.inquiryType === 'tour_request' ? 'Tour Request'
     : params.inquiryType === 'maintenance_emergency' ? 'Maintenance Emergency'
     : 'General Inquiry'
 
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: params.to,
-    subject: `New ${typeLabel} from ${params.name}`,
-    html: `
+  await sendEmail(
+    params.to,
+    `New ${typeLabel} from ${params.name}`,
+    `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #2563EB, #1E40AF); padding: 24px; border-radius: 8px 8px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 20px;">G&A Property Management</h1>
@@ -145,7 +149,7 @@ export async function sendInquiryNotification(params: {
         </div>
       </div>
     `,
-  })
+  )
 }
 
 export async function sendMaintenanceNotification(params: {
@@ -155,14 +159,10 @@ export async function sendMaintenanceNotification(params: {
   priority: string
   category: string
 }) {
-  const resend = getResend()
-  if (!resend) return
-
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: params.to,
-    subject: `New Maintenance Request: ${params.title}`,
-    html: `
+  await sendEmail(
+    params.to,
+    `New Maintenance Request: ${params.title}`,
+    `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #2563EB, #1E40AF); padding: 24px; border-radius: 8px 8px 0 0;">
           <h1 style="color: white; margin: 0; font-size: 20px;">G&A Property Management</h1>
@@ -179,5 +179,5 @@ export async function sendMaintenanceNotification(params: {
         </div>
       </div>
     `,
-  })
+  )
 }
