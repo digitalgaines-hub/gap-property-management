@@ -155,12 +155,7 @@ export default function Home() {
                 </ul>
               </div>
 
-              <Link
-                href="/properties/1"
-                className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
-              >
-                View Full Details & Apply
-              </Link>
+
             </div>
           </div>
         </div>
