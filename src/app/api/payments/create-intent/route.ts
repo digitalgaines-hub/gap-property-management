@@ -11,22 +11,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { leaseId, amount } = await req.json()
+    const { leaseId, leaseIds, amount } = await req.json()
 
-    if (!leaseId || !amount || amount <= 0) {
+    const idsToVerify: string[] = leaseIds?.length ? leaseIds : leaseId ? [leaseId] : []
+
+    if (idsToVerify.length === 0 || !amount || amount <= 0) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-    // Verify lease belongs to this user
-    const { data: lease } = await supabase
+    // Verify all leases belong to this user
+    const { data: verifiedLeases } = await supabase
       .from('leases')
       .select('id, tenant_id, monthly_rent')
-      .eq('id', leaseId)
+      .in('id', idsToVerify)
       .eq('tenant_id', user.id)
       .eq('status', 'active')
-      .single()
 
-    if (!lease) {
+    if (!verifiedLeases || verifiedLeases.length !== idsToVerify.length) {
       return NextResponse.json({ error: 'Lease not found' }, { status: 404 })
     }
 
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
       customer: customer.id,
       payment_method_types: ['card'],
       metadata: {
-        leaseId,
+        leaseIds: idsToVerify.join(','),
         tenantId: user.id,
       },
     })

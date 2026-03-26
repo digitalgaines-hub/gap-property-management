@@ -20,7 +20,7 @@ export default async function TenantLayout({
     .eq('id', user.id)
     .single()
 
-  const { data: lease } = await supabase
+  const { data: leasesRaw } = await supabase
     .from('leases')
     .select(`
       id,
@@ -40,11 +40,23 @@ export default async function TenantLayout({
     `)
     .eq('tenant_id', user.id)
     .eq('status', 'active')
-    .limit(1)
-    .single()
 
-  // Supabase returns joined relations — cast through unknown for nested shape
-  const unit = lease?.unit as unknown as { id: string; unit_number: string; property: { name: string; address_line1: string } } | null
+  type UnitShape = { id: string; unit_number: string; property: { name: string; address_line1: string } } | null
+
+  const leases = (leasesRaw ?? []).map(lease => {
+    const unit = lease.unit as unknown as UnitShape
+    return {
+      id: lease.id,
+      leaseStart: lease.lease_start,
+      leaseEnd: lease.lease_end,
+      monthlyRent: lease.monthly_rent,
+      status: lease.status,
+      unitId: unit?.id ?? null,
+      unitNumber: unit?.unit_number ?? null,
+      propertyName: unit?.property?.name ?? null,
+      propertyAddress: unit?.property?.address_line1 ?? null,
+    }
+  })
 
   return (
     <TenantShell
@@ -54,17 +66,8 @@ export default async function TenantLayout({
         fullName: profile?.full_name ?? null,
         phone: profile?.phone ?? null,
       }}
-      lease={lease ? {
-        id: lease.id,
-        leaseStart: lease.lease_start,
-        leaseEnd: lease.lease_end,
-        monthlyRent: lease.monthly_rent,
-        status: lease.status,
-        unitId: unit?.id ?? null,
-        unitNumber: unit?.unit_number ?? null,
-        propertyName: unit?.property?.name ?? null,
-        propertyAddress: unit?.property?.address_line1 ?? null,
-      } : null}
+      lease={leases[0] ?? null}
+      leases={leases}
     >
       {children}
     </TenantShell>

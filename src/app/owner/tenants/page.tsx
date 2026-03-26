@@ -177,7 +177,8 @@ export default function OwnerTenants() {
       ) : (
         <div className="space-y-4">
           {tenants.map(tenant => {
-            const activeLease = tenant.leases.find(l => l.status === 'active')
+            const activeLeases = tenant.leases.filter(l => l.status === 'active')
+            const totalRent = activeLeases.reduce((sum, l) => sum + Number(l.monthly_rent), 0)
             return (
               <div key={tenant.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -197,32 +198,46 @@ export default function OwnerTenants() {
                     </div>
                   </div>
 
-                  {activeLease && (
+                  {activeLeases.length > 0 && (
                     <div className="text-right">
                       <p className="text-lg font-bold text-blue-600">
-                        ${Number(activeLease.monthly_rent).toLocaleString()}/mo
+                        ${totalRent.toLocaleString()}/mo
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {activeLease.unit?.unit_number} @ {activeLease.unit?.property?.name}
-                      </p>
+                      {activeLeases.length > 1 && (
+                        <p className="text-xs text-gray-400">{activeLeases.length} active leases</p>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {activeLease && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-4 text-sm text-gray-600">
-                    <span>Lease: {new Date(activeLease.lease_start).toLocaleDateString()} – {new Date(activeLease.lease_end).toLocaleDateString()}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      activeLease.status === 'active' ? 'bg-green-100 text-green-700' :
-                      activeLease.status === 'expired' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {activeLease.status}
-                    </span>
+                {activeLeases.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                    {activeLeases.map(lease => (
+                      <div key={lease.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <div className="flex flex-wrap items-center gap-3 text-gray-600">
+                          <span className="font-medium text-gray-800">
+                            {lease.unit?.unit_number} @ {lease.unit?.property?.name}
+                          </span>
+                          <span className="text-gray-500">
+                            ${Number(lease.monthly_rent).toLocaleString()}/mo
+                          </span>
+                          <span className="text-gray-400">
+                            {new Date(lease.lease_start).toLocaleDateString()} – {new Date(lease.lease_end).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          lease.status === 'active' ? 'bg-green-100 text-green-700' :
+                          lease.status === 'expired' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {lease.status}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {!activeLease && tenant.leases.length === 0 && (
+                {activeLeases.length === 0 && tenant.leases.length === 0 && (
                   <p className="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-400">No lease on file</p>
                 )}
               </div>

@@ -135,7 +135,9 @@ function AutopaySetupForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
 
 // ─── Main payments page ─────────────────────────────────────
 export default function TenantPayments() {
-  const { user, lease } = useTenant()
+  const { user, lease, leases } = useTenant()
+  const activeLeases = leases.filter(l => l.status === 'active')
+  const totalRent = activeLeases.reduce((sum, l) => sum + Number(l.monthlyRent), 0)
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
   const [showPayForm, setShowPayForm] = useState(false)
@@ -200,7 +202,11 @@ export default function TenantPayments() {
       const res = await fetch('/api/payments/create-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaseId: lease.id, amount: Number(lease.monthlyRent) }),
+        body: JSON.stringify({
+          leaseId: lease.id,
+          leaseIds: activeLeases.map(l => l.id),
+          amount: totalRent,
+        }),
       })
       const data = await res.json()
       if (data.clientSecret) {
@@ -268,7 +274,7 @@ export default function TenantPayments() {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-sm">Next Payment Due</p>
           <p className="text-3xl font-bold text-blue-600">
-            {lease ? `$${Number(lease.monthlyRent).toLocaleString()}` : '--'}
+            {activeLeases.length > 0 ? `$${totalRent.toLocaleString()}` : '--'}
           </p>
           <p className="text-sm text-gray-600 mt-1">
             {lease ? getNextDueDate(lease.leaseStart) : 'No active lease'}
@@ -294,6 +300,25 @@ export default function TenantPayments() {
         </div>
       </div>
 
+      {/* Lease Breakdown */}
+      {activeLeases.length > 1 && !showPayForm && !showAutopay && (
+        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">Rent Breakdown</h2>
+          <div className="space-y-2">
+            {activeLeases.map(l => (
+              <div key={l.id} className="flex justify-between text-sm">
+                <span className="text-gray-700">{l.unitNumber} @ {l.propertyName}</span>
+                <span className="font-medium text-gray-800">${Number(l.monthlyRent).toLocaleString()}/mo</span>
+              </div>
+            ))}
+            <div className="flex justify-between pt-2 border-t border-gray-200 font-semibold">
+              <span className="text-gray-800">Total</span>
+              <span className="text-blue-600">${totalRent.toLocaleString()}/mo</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Actions */}
       {lease && !showPayForm && !showAutopay && (
         <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -302,7 +327,7 @@ export default function TenantPayments() {
             className="flex items-center justify-center gap-3 bg-blue-600 text-white p-5 rounded-lg font-semibold hover:bg-blue-700 transition"
           >
             <FaCreditCard className="text-lg" />
-            Pay Rent — ${Number(lease.monthlyRent).toLocaleString()}
+            Pay Rent — ${totalRent.toLocaleString()}
           </button>
           {autopayEnrollment ? (
             <div className="flex items-center justify-between bg-green-50 border border-green-200 p-5 rounded-lg">
@@ -365,7 +390,7 @@ export default function TenantPayments() {
         <div className="mb-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Set Up Auto-Pay</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Save a payment method to automatically pay your rent of ${lease ? Number(lease.monthlyRent).toLocaleString() : '--'} on the 1st of each month.
+            Save a payment method to automatically pay your rent of ${activeLeases.length > 0 ? `$${totalRent.toLocaleString()}` : '--'} on the 1st of each month.
           </p>
           <Elements
             stripe={stripePromise}
