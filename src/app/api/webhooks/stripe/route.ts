@@ -33,14 +33,19 @@ export async function POST(req: Request) {
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        const { leaseId, tenantId } = paymentIntent.metadata
+        const { leaseId, leaseIds, tenantId, baseAmount: baseStr, surchargeAmount: surchargeStr } = paymentIntent.metadata
+        const primaryLeaseId = leaseId || (leaseIds ? leaseIds.split(',')[0] : null)
 
-        if (leaseId && tenantId) {
+        if (primaryLeaseId && tenantId) {
           const amount = paymentIntent.amount / 100
+          const baseAmount = baseStr ? parseFloat(baseStr) : amount
+          const surchargeAmount = surchargeStr ? parseFloat(surchargeStr) : 0
           await supabase.from('payments').insert({
             tenant_id: tenantId,
-            lease_id: leaseId,
+            lease_id: primaryLeaseId,
             amount,
+            base_amount: baseAmount,
+            surcharge_amount: surchargeAmount,
             payment_date: new Date().toISOString(),
             due_date: new Date().toISOString().split('T')[0],
             payment_method: paymentIntent.payment_method_types?.[0] === 'us_bank_account' ? 'ach' : 'credit_card',
@@ -63,14 +68,19 @@ export async function POST(req: Request) {
 
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        const { leaseId, tenantId } = paymentIntent.metadata
+        const { leaseId, leaseIds: failedLeaseIds, tenantId } = paymentIntent.metadata
+        const failedPrimaryLeaseId = leaseId || (failedLeaseIds ? failedLeaseIds.split(',')[0] : null)
 
-        if (leaseId && tenantId) {
+        if (failedPrimaryLeaseId && tenantId) {
           const amount = paymentIntent.amount / 100
+          const baseAmount = paymentIntent.metadata.baseAmount ? parseFloat(paymentIntent.metadata.baseAmount) : amount
+          const surchargeAmount = paymentIntent.metadata.surchargeAmount ? parseFloat(paymentIntent.metadata.surchargeAmount) : 0
           await supabase.from('payments').insert({
             tenant_id: tenantId,
-            lease_id: leaseId,
+            lease_id: failedPrimaryLeaseId,
             amount,
+            base_amount: baseAmount,
+            surcharge_amount: surchargeAmount,
             payment_date: new Date().toISOString(),
             due_date: new Date().toISOString().split('T')[0],
             payment_method: 'credit_card',

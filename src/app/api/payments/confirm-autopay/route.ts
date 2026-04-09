@@ -3,6 +3,8 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin'
 import { getStripe } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 
+const CARD_SURCHARGE_RATE = 0.03
+
 export async function POST(req: Request) {
   try {
     const supabase = await createServerSupabaseClient()
@@ -35,6 +37,7 @@ export async function POST(req: Request) {
 
     const leaseId = metadata.leaseId
     const dayOfMonth = parseInt(metadata.dayOfMonth) || 1
+    const paymentMethodType: 'card' | 'ach' = metadata.paymentMethodType === 'ach' ? 'ach' : 'card'
     const customerId = setupIntent.customer as string
     const paymentMethodId = setupIntent.payment_method as string
 
@@ -67,6 +70,12 @@ export async function POST(req: Request) {
       (sum, l) => sum + Number(l.monthly_rent), 0
     )
 
+    // Calculate surcharge for card payments
+    const surchargeAmount = paymentMethodType === 'card'
+      ? Math.round(totalRent * CARD_SURCHARGE_RATE * 100) / 100
+      : 0
+    const subscriptionTotal = totalRent + surchargeAmount
+
     // Create a Stripe Product + Price for this tenant's rent
     const product = await stripe.products.create({
       name: `Monthly Rent — ${user.email}`,
@@ -75,10 +84,14 @@ export async function POST(req: Request) {
 
     const price = await stripe.prices.create({
       product: product.id,
-      unit_amount: Math.round(totalRent * 100),
+      unit_amount: Math.round(subscriptionTotal * 100),
       currency: 'usd',
       recurring: { interval: 'month' },
-      metadata: { tenantId: user.id },
+      metadata: {
+        tenantId: user.id,
+        baseAmount: String(totalRent),
+        surchargeAmount: String(surchargeAmount),
+      },
     })
 
     // Calculate billing_cycle_anchor: the next 1st of the month
@@ -116,7 +129,7 @@ export async function POST(req: Request) {
         stripe_payment_method_id: paymentMethodId,
         stripe_subscription_id: subscription.id,
         stripe_price_id: price.id,
-        payment_method_type: 'card',
+        payment_method_type: paymentMethodType,
         day_of_month: dayOfMonth,
         is_active: true,
       }, {

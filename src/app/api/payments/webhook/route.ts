@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         // Look up the enrollment to get tenant/lease info
         const { data: enrollment } = await supabase
           .from('autopay_enrollment')
-          .select('tenant_id, lease_id')
+          .select('tenant_id, lease_id, payment_method_type, stripe_price_id')
           .eq('stripe_subscription_id', subscriptionId)
           .eq('is_active', true)
           .single()
@@ -56,6 +56,9 @@ export async function POST(req: Request) {
         }
 
         const amountPaid = (invoice.amount_paid ?? 0) / 100
+        const isCard = enrollment.payment_method_type === 'card'
+        const baseAmount = isCard ? Math.round((amountPaid / 1.03) * 100) / 100 : amountPaid
+        const surchargeAmount = isCard ? Math.round((amountPaid - baseAmount) * 100) / 100 : 0
         const now = new Date()
         const dueDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))
           .toISOString().split('T')[0]
@@ -65,9 +68,11 @@ export async function POST(req: Request) {
           tenant_id: enrollment.tenant_id,
           lease_id: enrollment.lease_id,
           amount: amountPaid,
+          base_amount: baseAmount,
+          surcharge_amount: surchargeAmount,
           payment_date: new Date().toISOString(),
           due_date: dueDate,
-          payment_method: 'credit_card',
+          payment_method: isCard ? 'credit_card' : 'ach',
           stripe_invoice_id: invoice.id,
           status: 'completed',
           notes: 'Auto-pay',
@@ -96,43 +101,48 @@ export async function POST(req: Request) {
         const subscriptionId = getSubscriptionId(invoice)
         if (!subscriptionId) break
 
-        const { data: enrollment } = await supabase
+        const { data: failedEnrollment } = await supabase
           .from('autopay_enrollment')
-          .select('tenant_id, lease_id')
+          .select('tenant_id, lease_id, payment_method_type')
           .eq('stripe_subscription_id', subscriptionId)
           .eq('is_active', true)
           .single()
 
-        if (!enrollment) break
+        if (!failedEnrollment) break
 
         const amountDue = (invoice.amount_due ?? 0) / 100
-        const now = new Date()
-        const dueDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1))
+        const failedIsCard = failedEnrollment.payment_method_type === 'card'
+        const failedBaseAmount = failedIsCard ? Math.round((amountDue / 1.03) * 100) / 100 : amountDue
+        const failedSurcharge = failedIsCard ? Math.round((amountDue - failedBaseAmount) * 100) / 100 : 0
+        const failedNow = new Date()
+        const failedDueDate = new Date(Date.UTC(failedNow.getFullYear(), failedNow.getMonth(), 1))
           .toISOString().split('T')[0]
 
         // Record the failed payment
         await supabase.from('payments').insert({
-          tenant_id: enrollment.tenant_id,
-          lease_id: enrollment.lease_id,
+          tenant_id: failedEnrollment.tenant_id,
+          lease_id: failedEnrollment.lease_id,
           amount: amountDue,
+          base_amount: failedBaseAmount,
+          surcharge_amount: failedSurcharge,
           payment_date: new Date().toISOString(),
-          due_date: dueDate,
-          payment_method: 'credit_card',
+          due_date: failedDueDate,
+          payment_method: failedIsCard ? 'credit_card' : 'ach',
           stripe_invoice_id: invoice.id,
           status: 'failed',
           notes: 'Auto-pay failed',
         })
 
         // Send failure notification
-        const { data: profile } = await supabase
+        const { data: failedProfile } = await supabase
           .from('profiles')
           .select('email')
-          .eq('id', enrollment.tenant_id)
+          .eq('id', failedEnrollment.tenant_id)
           .single()
 
-        if (profile?.email) {
+        if (failedProfile?.email) {
           await sendPaymentFailed({
-            to: profile.email,
+            to: failedProfile.email,
             amount: amountDue,
           }).catch(err => console.error('Failed to send failure email:', err))
         }

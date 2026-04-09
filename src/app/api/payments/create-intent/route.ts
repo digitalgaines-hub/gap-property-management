@@ -2,6 +2,8 @@ import { getStripe } from '@/lib/stripe'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+const CARD_SURCHARGE_RATE = 0.03
+
 export async function POST(req: Request) {
   try {
     const supabase = await createServerSupabaseClient()
@@ -11,15 +13,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { leaseId, leaseIds, amount } = await req.json()
+    const { leaseId, leaseIds, paymentMethod } = await req.json()
 
     const idsToVerify: string[] = leaseIds?.length ? leaseIds : leaseId ? [leaseId] : []
+    const method: 'ach' | 'card' = paymentMethod === 'card' ? 'card' : 'ach'
 
-    if (idsToVerify.length === 0 || !amount || amount <= 0) {
+    if (idsToVerify.length === 0) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-    // Verify all leases belong to this user
+    // Verify all leases belong to this user and calculate rent server-side
     const { data: verifiedLeases } = await supabase
       .from('leases')
       .select('id, tenant_id, monthly_rent')
@@ -31,6 +34,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Lease not found' }, { status: 404 })
     }
 
+    // Server-side rent calculation — never trust the client amount
+    const baseAmount = verifiedLeases.reduce((sum, l) => sum + Number(l.monthly_rent), 0)
+    const surchargeAmount = method === 'card'
+      ? Math.round(baseAmount * CARD_SURCHARGE_RATE * 100) / 100
+      : 0
+    const totalAmount = baseAmount + surchargeAmount
+
     const stripe = getStripe()
 
     // Get or create Stripe customer
@@ -41,17 +51,25 @@ export async function POST(req: Request) {
     })
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
+      amount: Math.round(totalAmount * 100),
       currency: 'usd',
       customer: customer.id,
-      payment_method_types: ['card'],
+      payment_method_types: method === 'ach' ? ['us_bank_account'] : ['card'],
       metadata: {
         leaseIds: idsToVerify.join(','),
         tenantId: user.id,
+        baseAmount: String(baseAmount),
+        surchargeAmount: String(surchargeAmount),
+        paymentMethod: method,
       },
     })
 
-    return NextResponse.json({ clientSecret: paymentIntent.client_secret })
+    return NextResponse.json({
+      clientSecret: paymentIntent.client_secret,
+      baseAmount,
+      surchargeAmount,
+      totalAmount,
+    })
   } catch (error) {
     console.error('Payment intent error:', error)
     return NextResponse.json({ error: 'Failed to create payment' }, { status: 500 })

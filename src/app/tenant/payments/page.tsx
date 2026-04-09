@@ -3,11 +3,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenant } from '../TenantShell'
-import { FaCreditCard, FaCheckCircle, FaTimes, FaSync } from 'react-icons/fa'
+import { FaCreditCard, FaCheckCircle, FaTimes, FaSync, FaUniversity } from 'react-icons/fa'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
+const CARD_SURCHARGE_RATE = 0.03
 
 interface Payment {
   id: string
@@ -23,6 +25,87 @@ interface AutopayEnrollment {
   is_active: boolean
   payment_method_type: string
   day_of_month: number
+}
+
+type PaymentMethodChoice = 'ach' | 'card'
+
+// ─── Payment method selector ─────────────────────────────────
+function PaymentMethodSelector({
+  selected,
+  onChange,
+  rentAmount,
+}: {
+  selected: PaymentMethodChoice
+  onChange: (m: PaymentMethodChoice) => void
+  rentAmount: number
+}) {
+  const surcharge = Math.round(rentAmount * CARD_SURCHARGE_RATE * 100) / 100
+
+  return (
+    <div className="space-y-3">
+      <label className="text-sm font-semibold text-gray-700">Payment Method</label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => onChange('ach')}
+          className={`flex items-center gap-3 p-4 rounded-lg border-2 text-left transition ${
+            selected === 'ach'
+              ? 'border-blue-600 bg-blue-50'
+              : 'border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <FaUniversity className={`text-lg ${selected === 'ach' ? 'text-blue-600' : 'text-gray-400'}`} />
+          <div>
+            <p className={`font-semibold ${selected === 'ach' ? 'text-blue-700' : 'text-gray-800'}`}>
+              ACH Bank Transfer
+            </p>
+            <p className="text-xs text-green-600 font-medium">No processing fee</p>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange('card')}
+          className={`flex items-center gap-3 p-4 rounded-lg border-2 text-left transition ${
+            selected === 'card'
+              ? 'border-blue-600 bg-blue-50'
+              : 'border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <FaCreditCard className={`text-lg ${selected === 'card' ? 'text-blue-600' : 'text-gray-400'}`} />
+          <div>
+            <p className={`font-semibold ${selected === 'card' ? 'text-blue-700' : 'text-gray-800'}`}>
+              Credit / Debit Card
+            </p>
+            <p className="text-xs text-orange-600 font-medium">3% fee (+${surcharge.toFixed(2)})</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Fee breakdown (card only) ───────────────────────────────
+function FeeBreakdown({ baseAmount, surchargeAmount, totalAmount }: {
+  baseAmount: number
+  surchargeAmount: number
+  totalAmount: number
+}) {
+  return (
+    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-2">
+      <div className="flex justify-between text-sm text-gray-700">
+        <span>Rent</span>
+        <span>${baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+      </div>
+      <div className="flex justify-between text-sm text-orange-700">
+        <span>Processing fee (3%)</span>
+        <span>${surchargeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+      </div>
+      <div className="flex justify-between text-sm font-bold text-gray-900 pt-1 border-t border-orange-200">
+        <span>Total</span>
+        <span>${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+      </div>
+    </div>
+  )
 }
 
 // ─── One-time payment form ──────────────────────────────────
@@ -168,6 +251,9 @@ export default function TenantPayments() {
   const [autopaySecret, setAutopaySecret] = useState<string | null>(null)
   const [autopayEnrollment, setAutopayEnrollment] = useState<AutopayEnrollment | null>(null)
   const [successMsg, setSuccessMsg] = useState('')
+  const [payMethod, setPayMethod] = useState<PaymentMethodChoice>('ach')
+  const [autopayMethod, setAutopayMethod] = useState<PaymentMethodChoice>('ach')
+  const [feeBreakdown, setFeeBreakdown] = useState<{ baseAmount: number; surchargeAmount: number; totalAmount: number } | null>(null)
 
   const loadPayments = useCallback(async () => {
     if (!lease) {
@@ -236,7 +322,7 @@ export default function TenantPayments() {
     }
   }, [loadPayments, loadAutopay])
 
-  const startPayment = async () => {
+  const startPayment = async (method: PaymentMethodChoice) => {
     if (!lease) return
     try {
       const res = await fetch('/api/payments/create-intent', {
@@ -245,12 +331,17 @@ export default function TenantPayments() {
         body: JSON.stringify({
           leaseId: lease.id,
           leaseIds: activeLeases.map(l => l.id),
-          amount: totalRent,
+          paymentMethod: method,
         }),
       })
       const data = await res.json()
       if (data.clientSecret) {
         setClientSecret(data.clientSecret)
+        setFeeBreakdown({
+          baseAmount: data.baseAmount,
+          surchargeAmount: data.surchargeAmount,
+          totalAmount: data.totalAmount,
+        })
         setShowPayForm(true)
       }
     } catch (err) {
@@ -258,13 +349,17 @@ export default function TenantPayments() {
     }
   }
 
-  const startAutopay = async () => {
+  const startAutopay = async (method: PaymentMethodChoice) => {
     if (!lease) return
     try {
       const res = await fetch('/api/payments/setup-autopay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaseId: lease.id, dayOfMonth: 1 }),
+        body: JSON.stringify({
+          leaseId: lease.id,
+          dayOfMonth: 1,
+          paymentMethodType: method,
+        }),
       })
       const data = await res.json()
       if (data.clientSecret) {
@@ -294,6 +389,8 @@ export default function TenantPayments() {
   const hasLatePayments = payments.some(
     (p) => p.status === 'failed' || (p.status === 'pending' && new Date(p.due_date) < new Date())
   )
+
+  const cardSurcharge = Math.round(totalRent * CARD_SURCHARGE_RATE * 100) / 100
 
   return (
     <>
@@ -361,14 +458,34 @@ export default function TenantPayments() {
 
       {/* Payment Actions */}
       {lease && !showPayForm && !showAutopay && (
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            onClick={startPayment}
-            className="flex items-center justify-center gap-3 bg-blue-600 text-white p-5 rounded-lg font-semibold hover:bg-blue-700 transition"
-          >
-            <FaCreditCard className="text-lg" />
-            Pay Rent — ${totalRent.toLocaleString()}
-          </button>
+        <div className="mb-8 space-y-4">
+          {/* One-time payment section */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Make a Payment</h2>
+            <PaymentMethodSelector
+              selected={payMethod}
+              onChange={setPayMethod}
+              rentAmount={totalRent}
+            />
+            {payMethod === 'card' && (
+              <FeeBreakdown
+                baseAmount={totalRent}
+                surchargeAmount={cardSurcharge}
+                totalAmount={totalRent + cardSurcharge}
+              />
+            )}
+            <button
+              onClick={() => startPayment(payMethod)}
+              className="w-full flex items-center justify-center gap-3 bg-blue-600 text-white p-4 rounded-lg font-semibold hover:bg-blue-700 transition"
+            >
+              {payMethod === 'ach' ? <FaUniversity /> : <FaCreditCard />}
+              Pay Rent — ${payMethod === 'card'
+                ? (totalRent + cardSurcharge).toLocaleString(undefined, { minimumFractionDigits: 2 })
+                : totalRent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </button>
+          </div>
+
+          {/* Auto-pay section */}
           {autopayEnrollment ? (
             <div className="flex items-center justify-between bg-green-50 border border-green-200 p-5 rounded-lg">
               <div>
@@ -377,6 +494,7 @@ export default function TenantPayments() {
                 </p>
                 <p className="text-sm text-green-600 mt-1">
                   {autopayEnrollment.payment_method_type === 'card' ? 'Card' : 'ACH'} on the {ordinal(autopayEnrollment.day_of_month)} of each month
+                  {autopayEnrollment.payment_method_type === 'card' && ' (includes 3% processing fee)'}
                 </p>
               </div>
               <button
@@ -387,21 +505,52 @@ export default function TenantPayments() {
               </button>
             </div>
           ) : (
-            <button
-              onClick={startAutopay}
-              className="flex items-center justify-center gap-3 bg-white border-2 border-green-600 text-green-700 p-5 rounded-lg font-semibold hover:bg-green-50 transition"
-            >
-              <FaSync className="text-lg" />
-              Set Up Auto-Pay
-            </button>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Auto-Pay</h2>
+              <PaymentMethodSelector
+                selected={autopayMethod}
+                onChange={setAutopayMethod}
+                rentAmount={totalRent}
+              />
+              {autopayMethod === 'card' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm text-amber-800">
+                    Credit card payments include a 3% processing fee. Consider ACH bank transfer to avoid this fee.
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={() => startAutopay(autopayMethod)}
+                className="w-full flex items-center justify-center gap-3 bg-white border-2 border-green-600 text-green-700 p-4 rounded-lg font-semibold hover:bg-green-50 transition"
+              >
+                <FaSync className="text-lg" />
+                Set Up Auto-Pay
+              </button>
+            </div>
           )}
+
+          {/* Surcharge disclosure */}
+          <p className="text-xs text-gray-500 text-center">
+            Credit card payments include a 3% processing fee. ACH bank transfers are free.
+          </p>
         </div>
       )}
 
       {/* Stripe Payment Form */}
       {showPayForm && clientSecret && (
         <div className="mb-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Make a Payment</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            {payMethod === 'ach' ? 'Pay via Bank Transfer' : 'Pay via Card'}
+          </h2>
+          {feeBreakdown && payMethod === 'card' && (
+            <div className="mb-4">
+              <FeeBreakdown
+                baseAmount={feeBreakdown.baseAmount}
+                surchargeAmount={feeBreakdown.surchargeAmount}
+                totalAmount={feeBreakdown.totalAmount}
+              />
+            </div>
+          )}
           <Elements
             stripe={stripePromise}
             options={{
@@ -413,12 +562,14 @@ export default function TenantPayments() {
               onSuccess={() => {
                 setShowPayForm(false)
                 setClientSecret(null)
+                setFeeBreakdown(null)
                 setSuccessMsg('Payment completed successfully!')
                 loadPayments()
               }}
               onCancel={() => {
                 setShowPayForm(false)
                 setClientSecret(null)
+                setFeeBreakdown(null)
               }}
             />
           </Elements>
@@ -430,8 +581,21 @@ export default function TenantPayments() {
         <div className="mb-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Set Up Auto-Pay</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Save a payment method to automatically pay your rent of ${activeLeases.length > 0 ? `$${totalRent.toLocaleString()}` : '--'} on the 1st of each month.
+            Save a payment method to automatically pay your rent on the 1st of each month.
+            {autopayMethod === 'card' && (
+              <> Your monthly charge will be <strong>${(totalRent + cardSurcharge).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> (rent ${totalRent.toLocaleString(undefined, { minimumFractionDigits: 2 })} + 3% fee ${cardSurcharge.toFixed(2)}).</>
+            )}
+            {autopayMethod === 'ach' && (
+              <> Your monthly charge will be <strong>${totalRent.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> with no processing fee.</>
+            )}
           </p>
+          {autopayMethod === 'card' && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-800">
+                Credit card payments include a 3% processing fee. Consider ACH bank transfer to avoid this fee.
+              </p>
+            </div>
+          )}
           <Elements
             stripe={stripePromise}
             options={{

@@ -12,7 +12,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { leaseId, dayOfMonth } = await req.json()
+    const { leaseId, dayOfMonth, paymentMethodType } = await req.json()
+    const methodType: 'card' | 'ach' = paymentMethodType === 'card' ? 'card' : 'ach'
 
     // Verify lease belongs to this user
     const { data: lease } = await supabase
@@ -39,11 +40,12 @@ export async function POST(req: Request) {
     // Create a SetupIntent so the tenant can save a payment method
     const setupIntent = await stripe.setupIntents.create({
       customer: customer.id,
-      payment_method_types: ['card'],
+      payment_method_types: methodType === 'ach' ? ['us_bank_account'] : ['card'],
       metadata: {
         leaseId,
         tenantId: user.id,
         dayOfMonth: String(dayOfMonth || 1),
+        paymentMethodType: methodType,
       },
     })
 

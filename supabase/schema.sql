@@ -93,6 +93,8 @@ CREATE TABLE payments (
   tenant_id UUID NOT NULL REFERENCES profiles(id),
   lease_id UUID NOT NULL REFERENCES leases(id),
   amount DECIMAL(10, 2) NOT NULL,
+  base_amount DECIMAL(10, 2),
+  surcharge_amount DECIMAL(10, 2) DEFAULT 0,
   payment_date TIMESTAMPTZ NOT NULL,
   due_date DATE NOT NULL,
   payment_method TEXT CHECK (payment_method IN ('ach', 'credit_card', 'debit_card', 'check', 'cash')),
