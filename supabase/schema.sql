@@ -111,10 +111,13 @@ CREATE TABLE autopay_enrollment (
   lease_id UUID NOT NULL REFERENCES leases(id),
   stripe_customer_id TEXT NOT NULL,
   stripe_payment_method_id TEXT NOT NULL,
+  stripe_subscription_id TEXT,
+  stripe_price_id TEXT,
   payment_method_type TEXT NOT NULL CHECK (payment_method_type IN ('ach', 'card')),
   day_of_month INTEGER NOT NULL DEFAULT 1 CHECK (day_of_month BETWEEN 1 AND 28),
   is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (tenant_id, lease_id)
 );
 
 -- Maintenance Requests

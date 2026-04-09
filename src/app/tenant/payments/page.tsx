@@ -80,7 +80,7 @@ function PaymentForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel:
 }
 
 // ─── Auto-pay setup form ────────────────────────────────────
-function AutopaySetupForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
+function AutopaySetupForm({ leaseId, onSuccess, onCancel }: { leaseId: string; onSuccess: () => void; onCancel: () => void }) {
   const stripe = useStripe()
   const elements = useElements()
   const [processing, setProcessing] = useState(false)
@@ -93,10 +93,10 @@ function AutopaySetupForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
     setProcessing(true)
     setError('')
 
-    const { error: setupError } = await stripe.confirmSetup({
+    const { error: setupError, setupIntent } = await stripe.confirmSetup({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/tenant/payments?autopay=success`,
+        return_url: `${window.location.origin}/tenant/payments`,
       },
       redirect: 'if_required',
     })
@@ -104,9 +104,31 @@ function AutopaySetupForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
     if (setupError) {
       setError(setupError.message || 'Setup failed')
       setProcessing(false)
-    } else {
-      onSuccess()
+      return
     }
+
+    // SetupIntent succeeded without redirect — call confirm-autopay
+    if (setupIntent?.status === 'succeeded') {
+      try {
+        const res = await fetch('/api/payments/confirm-autopay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ setupIntentId: setupIntent.id }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          setError(data.error || 'Failed to save auto-pay enrollment')
+          setProcessing(false)
+          return
+        }
+      } catch {
+        setError('Failed to save auto-pay enrollment')
+        setProcessing(false)
+        return
+      }
+    }
+
+    onSuccess()
   }
 
   return (
@@ -189,10 +211,28 @@ export default function TenantPayments() {
       window.history.replaceState({}, '', '/tenant/payments')
       loadPayments()
     }
-    if (params.get('autopay') === 'success') {
-      setSuccessMsg('Auto-pay has been enabled!')
+
+    // Handle redirect return from Stripe SetupIntent (3DS etc.)
+    const setupIntentId = params.get('setup_intent')
+    const redirectStatus = params.get('redirect_status')
+    if (setupIntentId && redirectStatus === 'succeeded') {
       window.history.replaceState({}, '', '/tenant/payments')
-      loadAutopay()
+      fetch('/api/payments/confirm-autopay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupIntentId }),
+      })
+        .then(res => {
+          if (res.ok) {
+            setSuccessMsg('Auto-pay has been enabled!')
+            loadAutopay()
+          } else {
+            setSuccessMsg('Auto-pay setup completed on Stripe but failed to save. Please contact support.')
+          }
+        })
+        .catch(() => {
+          setSuccessMsg('Auto-pay setup completed on Stripe but failed to save. Please contact support.')
+        })
     }
   }, [loadPayments, loadAutopay])
 
@@ -400,6 +440,7 @@ export default function TenantPayments() {
             }}
           >
             <AutopaySetupForm
+              leaseId={lease!.id}
               onSuccess={() => {
                 setShowAutopay(false)
                 setAutopaySecret(null)

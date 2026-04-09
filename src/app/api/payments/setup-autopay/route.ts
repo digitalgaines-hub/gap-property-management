@@ -1,5 +1,6 @@
 import { getStripe } from '@/lib/stripe'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminSupabaseClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE() {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -65,12 +66,30 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Deactivate autopay enrollment
-    const { error } = await supabase
+    // Look up the active enrollment to get the subscription ID
+    const adminSupabase = createAdminSupabaseClient()
+    const { data: enrollment } = await adminSupabase
       .from('autopay_enrollment')
-      .update({ is_active: false })
+      .select('id, stripe_subscription_id')
       .eq('tenant_id', user.id)
       .eq('is_active', true)
+      .maybeSingle()
+
+    if (!enrollment) {
+      return NextResponse.json({ error: 'No active autopay found' }, { status: 404 })
+    }
+
+    // Cancel the Stripe subscription
+    if (enrollment.stripe_subscription_id) {
+      const stripe = getStripe()
+      await stripe.subscriptions.cancel(enrollment.stripe_subscription_id)
+    }
+
+    // Deactivate the enrollment
+    const { error } = await adminSupabase
+      .from('autopay_enrollment')
+      .update({ is_active: false })
+      .eq('id', enrollment.id)
 
     if (error) {
       return NextResponse.json({ error: 'Failed to cancel autopay' }, { status: 500 })
